@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ultimate UPI & Payments App</title>
+
+<!-- Razorpay Checkout JS -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<style>
+body { font-family: Arial; background:#f5f5f5; margin:0; }
+.header { background:#fff; padding:15px; font-weight:bold; }
+.section { background:#fff; margin-top:10px; padding:15px; }
+.grid { display:grid; grid-template-columns: repeat(4,1fr); gap:15px; text-align:center; }
+.circle { width:60px; height:60px; background:purple; border-radius:50%; margin:auto; display:flex; align-items:center; justify-content:center; color:white; font-size:22px; }
+.title { font-size:13px; margin-top:5px; }
+.popup { position:fixed; top:0; left:0; width:100%; height:100%; background:white; display:none; padding:20px; overflow:auto; }
+.back { cursor:pointer; color:purple; margin-bottom:20px; display:inline-block; }
+input, button { width:90%; padding:10px; margin:5px 0; }
+button { background:purple; color:white; border:none; cursor:pointer; }
+.footer { position:fixed; bottom:0; width:100%; background:#fff; display:flex; justify-content:space-around; padding:10px; }
+ul { text-align:left; }
+</style>
+
+</head>
+<body>
+
+<div id="home">
+
+<div class="header">Money Transfers</div>
+<div class="section">
+<div class="grid">
+<div onclick="openPage('send')"><div class="circle">📞</div><div class="title">Send</div></div>
+<div onclick="openPage('receive')"><div class="circle">⬇</div><div class="title">Receive</div></div>
+<div onclick="openPage('balance')"><div class="circle">₹</div><div class="title">Balance</div></div>
+<div onclick="openPage('history')"><div class="circle">🕘</div><div class="title">History</div></div>
+</div>
+</div>
+
+<div class="header">Recharge & Bills</div>
+<div class="section">
+<div class="grid">
+<div onclick="openPage('recharge')"><div class="circle">⚡</div><div class="title">Mobile</div></div>
+<div onclick="openPage('bill')"><div class="circle">💡</div><div class="title">Electricity</div></div>
+<div onclick="openPage('loan')"><div class="circle">💰</div><div class="title">Loan</div></div>
+<div onclick="openPage('offers')"><div class="circle">🎁</div><div class="title">Offers</div></div>
+</div>
+</div>
+
+</div>
+
+<!-- Popup -->
+<div id="popup" class="popup">
+<div class="back" onclick="goBack()">⬅ Back</div>
+<h2 id="pageTitle"></h2>
+<div id="formArea"></div>
+<h3>Transactions</h3>
+<ul id="historyList"></ul>
+</div>
+
+<div class="footer">
+<div>🏠</div><div>🔍</div><div>🔔</div><div>🕘</div>
+</div>
+
+<script>
+
+// Transaction History
+let historyData = [];
+
+// Show History List
+function updateHistory(){
+    let ul = document.getElementById("historyList");
+    ul.innerHTML = "";
+    historyData.forEach(h => {
+        let li = document.createElement("li");
+        li.innerText = h;
+        ul.appendChild(li);
+    });
+}
+
+// Open Section
+function openPage(type){
+    document.getElementById("home").style.display="none";
+    document.getElementById("popup").style.display="block";
+    document.getElementById("pageTitle").innerText = type;
+
+    let html = "";
+
+    if(type=="send"){
+        html = `
+            <input id="upiId" placeholder="Enter UPI ID"><br>
+            <input id="sendAmt" placeholder="Amount"><br>
+            <button onclick="sendUPI()">Send</button>
+        `;
+    }
+    if(type=="recharge"){
+        html = `
+            <input id="mobile" placeholder="Mobile Number"><br>
+            <input id="sendAmt" placeholder="Amount"><br>
+            <button onclick="razorpayPay('Recharge')">Pay Recharge</button>
+        `;
+    }
+    if(type=="bill"){
+        html = `
+            <input id="consumer" placeholder="Consumer ID"><br>
+            <input id="sendAmt" placeholder="Amount"><br>
+            <button onclick="razorpayPay('Bill Payment')">Pay Bill</button>
+        `;
+    }
+    if(type=="loan"){
+        html = `<p>Loan Options will be added soon!</p>`;
+    }
+    if(type=="offers"){
+        html = `<p>Offers: Cashback upto 50% 🎉</p>`;
+    }
+    if(type=="receive"){
+        html = `<p>Your UPI ID: yourupi@bank</p>`;
+    }
+    if(type=="balance"){
+        html = `<p>Balance: ₹15,000</p>`;
+    }
+    if(type=="history"){
+        html = `<p>Transaction History below:</p>`;
+    }
+
+    document.getElementById("formArea").innerHTML = html;
+    updateHistory();
+}
+
+// Go Back
+function goBack(){
+    document.getElementById("home").style.display="block";
+    document.getElementById("popup").style.display="none";
+}
+
+// Send Money via UPI Intent
+function sendUPI(){
+    let upi = document.getElementById("upiId").value;
+    let amt = document.getElementById("sendAmt").value;
+    if(!upi || !amt){ alert("Enter UPI and Amount"); return; }
+    let url = "upi://pay?pa="+upi+"&am="+amt+"&cu=INR";
+    window.location.href = url;
+
+    historyData.push(`Sent ₹${amt} to ${upi}`);
+    updateHistory();
+}
+
+// Razorpay REAL Payment
+function razorpayPay(type){
+    let amt = document.getElementById("sendAmt").value;
+    if(!amt){ alert("Enter Amount"); return; }
+    amt = amt * 100; // paisa
+
+    var options = {
+        "key": "YOUR_RAZORPAY_KEY", // Replace with your Razorpay Key
+        "amount": amt,
+        "currency": "INR",
+        "name": "UPI Web App",
+        "description": type,
+        "handler": function (response){
+            alert("Payment Successful: " + response.razorpay_payment_id);
+            historyData.push(`${type} ₹${amt/100} - ${response.razorpay_payment_id}`);
+            updateHistory();
+        },
+        "prefill": { "name": "User" },
+        "theme": { "color": "#6200ea" }
+    };
+    var rzp = new Razorpay(options);
+    rzp.open();
+}
+
+</script>
+
+</body>
+</html>
